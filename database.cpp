@@ -15,6 +15,20 @@ database::database(std::string name): base_dir(BASEDIR){
 database::database(std::string name, std::string full_path) {
     this->set_name(name);
     this->set_dir(full_path);
+    // Load all the db files
+    for (const auto& file: std::filesystem::directory_iterator(this->get_dir())){
+        if (file.exists() && file.is_regular_file() && file.path().extension() == FILE_EXT) {
+            std::string key = file.path().filename();
+            key = key.substr(0, key.length() - FILE_ENDING_SIZE);
+            std::string value = get_key_value(key);
+            key_value_store.insert({key, value});
+        }
+    }
+}
+
+database::~database() {
+    this->key_value_store.clear();
+    delete this;
 }
 
 database *database::load_db(std::string name) {
@@ -30,6 +44,7 @@ int database::delete_db() {
     if (std::filesystem::exists(this->get_dir())) {
         std::filesystem::remove_all(this->get_dir());
     }
+    this->key_value_store.clear();
     delete this;
     return 0;
 }
@@ -66,23 +81,29 @@ std::string database::create_dir(std::string base_dir){
 
 int database::set_key_value(std::string key, std::string value){
     std::ofstream os;
-    os.open(this->get_dir() + "/" + key + FILE_EXT, std::ios::out | std::ios::trunc);
+    os.open(this->get_dir() + "/" + key + FILE_ENDING, std::ios::out | std::ios::trunc);
     os << value;
     os.close();
+    key_value_store.insert({key, value});
     return 0;
 }
 
 std::string database::get_key_value(std::string key){
-    std::ifstream is(this->get_dir() + "/" + key + FILE_EXT);
-    std::string value;
-    // Seek to end of file, reserve that amount of sapce for string
-    is.seekg(0, std::ios::end);
-    value.reserve(is.tellg());
-    // Seek to beginning of file
-    is.seekg(0, std::ios::beg);
+    auto get_val = this->key_value_store.find(key);
+    if (get_val != this->key_value_store.end()) {
+        return get_val->second;
+    } else {
+        std::ifstream is(this->get_dir() + "/" + key + FILE_ENDING);
+        std::string value;
+        // Seek to end of file, reserve that amount of sapce for string
+        is.seekg(0, std::ios::end);
+        value.reserve(is.tellg());
+        // Seek to beginning of file
+        is.seekg(0, std::ios::beg);
 
-    value.assign((std::istreambuf_iterator<char>(is)), (std::istreambuf_iterator<char>()));
-    is.close();
-    return value;
+        value.assign((std::istreambuf_iterator<char>(is)), (std::istreambuf_iterator<char>()));
+        is.close();
+        return value;
+    }
 }
 
