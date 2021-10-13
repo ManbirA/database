@@ -41,12 +41,15 @@ database *database::load_db(std::string name) {
 }
 
 int database::delete_db() {
-    if (std::filesystem::exists(this->get_dir())) {
-        std::filesystem::remove_all(this->get_dir());
+    if (this != nullptr) {
+        if (std::filesystem::exists(this->get_dir())) {
+            std::filesystem::remove_all(this->get_dir());
+        }
+        this->key_value_store.clear();
+        delete this;
+        return 0;
     }
-    this->key_value_store.clear();
-    delete this;
-    return 0;
+    return -1;
 }
 
 std::string database::get_name() {
