@@ -93,6 +93,18 @@ int main() {
             // Set key value
         } else if (operation == 'E') {
             break;
+        } else if (operation == 'G') {
+            int key_size = buf_s.at(1) - '0';
+            std::string key = buf_s.substr(2, key_size);
+            if (db == nullptr) {
+                char buf_rtr[] = "DB not created, not stored";
+                send(client_soc, buf_rtr, sizeof(buf_rtr), 0);
+            } else {
+                std::string value = db->get_key_value(key);
+                char buf_rtr[value.length()];
+                sprintf(buf_rtr, "%s",value.c_str());
+                send(client_soc, buf_rtr, sizeof(buf_rtr), 0);
+            }
         }
 
 
