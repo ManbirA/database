@@ -6,6 +6,8 @@
 #include <arpa/inet.h>
 #include <string.h>
 #include <string>
+#include <valarray>
+#include "database.h"
 
 int main() {
 
@@ -48,6 +50,7 @@ int main() {
     }
 
     close(listening_soc);
+    database *db = nullptr;
 
     char buf[4096];
     while(true) {
@@ -63,7 +66,37 @@ int main() {
             break;
         }
         std::cout << std::string(buf, 0, bytes_recieved) << std::endl;
+        std::string buf_s(buf);
+        // Parse input
 
+        char operation = buf_s.at(0);
+        if (operation == 'N') {
+            // Create new db
+            int size = buf_s.at(1) - '0';
+            std::string name = buf_s.substr(2, size);
+            db = new database(name);
+            char buf_rtr[] = "Created";
+            send(client_soc, buf_rtr, sizeof(buf_rtr), 0);
+        } else if (operation == 'S') {
+            int key_size = buf_s.at(1) - '0';
+            std::string key_name = buf_s.substr(2, key_size);
+            int value_size = buf_s.at(2 + key_size) - '0';
+            std::string value = buf_s.substr(3 + key_size, value_size);
+            if (db == nullptr) {
+                char buf_rtr[] = "DB not created, not stored";
+                send(client_soc, buf_rtr, sizeof(buf_rtr), 0);
+            } else {
+                db->set_key_value(key_name, value);
+                char buf_rtr[] = "Stored in DB";
+                send(client_soc, buf_rtr, sizeof(buf_rtr), 0);
+            }
+            // Set key value
+        } else if (operation == 'E') {
+            break;
+        }
+
+
+        std::cout << operation << std::endl;
         send(client_soc, buf, bytes_recieved+1, 0);
     }
 
